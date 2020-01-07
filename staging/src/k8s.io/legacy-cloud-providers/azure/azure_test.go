@@ -19,10 +19,10 @@ limitations under the License.
 package azure
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"math"
+	"net/http"
 	"strings"
 	"testing"
 
@@ -38,99 +38,10 @@ import (
 	"k8s.io/client-go/tools/record"
 	servicehelpers "k8s.io/cloud-provider/service/helpers"
 	"k8s.io/legacy-cloud-providers/azure/auth"
+	"k8s.io/legacy-cloud-providers/azure/retry"
 )
 
 var testClusterName = "testCluster"
-
-func TestParseConfig(t *testing.T) {
-	azureConfig := `{
-		"aadClientCertPassword": "aadClientCertPassword",
-		"aadClientCertPath": "aadClientCertPath",
-		"aadClientId": "aadClientId",
-		"aadClientSecret": "aadClientSecret",
-		"cloud":"AzurePublicCloud",
-		"cloudProviderBackoff": true,
-		"cloudProviderBackoffDuration": 1,
-		"cloudProviderBackoffExponent": 1,
-		"cloudProviderBackoffJitter": 1,
-		"cloudProviderBackoffRetries": 1,
-		"cloudProviderRatelimit": true,
-		"cloudProviderRateLimitBucket": 1,
-		"CloudProviderRateLimitBucketWrite": 1,
-		"cloudProviderRateLimitQPS": 1,
-		"CloudProviderRateLimitQPSWrite": 1,
-		"availabilitySetNodesCacheTTLInSeconds": 100,
-		"vmssCacheTTLInSeconds": 100,
-		"vmssVirtualMachinesCacheTTLInSeconds": 100,
-		"vmCacheTTLInSeconds": 100,
-		"loadBalancerCacheTTLInSeconds": 100,
-		"nsgCacheTTLInSeconds": 100,
-		"routeTableCacheTTLInSeconds": 100,
-		"location": "location",
-		"maximumLoadBalancerRuleCount": 1,
-		"primaryAvailabilitySetName": "primaryAvailabilitySetName",
-		"primaryScaleSetName": "primaryScaleSetName",
-		"resourceGroup": "resourceGroup",
-		"routeTableName": "routeTableName",
-		"routeTableResourceGroup": "routeTableResourceGroup",
-		"securityGroupName": "securityGroupName",
-		"subnetName": "subnetName",
-		"subscriptionId": "subscriptionId",
-		"tenantId": "tenantId",
-		"useInstanceMetadata": true,
-		"useManagedIdentityExtension": true,
-		"vnetName": "vnetName",
-		"vnetResourceGroup": "vnetResourceGroup",
-		vmType: "standard"
-	}`
-	expected := &Config{
-		AzureAuthConfig: auth.AzureAuthConfig{
-			AADClientCertPassword:       "aadClientCertPassword",
-			AADClientCertPath:           "aadClientCertPath",
-			AADClientID:                 "aadClientId",
-			AADClientSecret:             "aadClientSecret",
-			Cloud:                       "AzurePublicCloud",
-			SubscriptionID:              "subscriptionId",
-			TenantID:                    "tenantId",
-			UseManagedIdentityExtension: true,
-		},
-		CloudProviderBackoff:                  true,
-		CloudProviderBackoffDuration:          1,
-		CloudProviderBackoffExponent:          1,
-		CloudProviderBackoffJitter:            1,
-		CloudProviderBackoffRetries:           1,
-		CloudProviderRateLimit:                true,
-		CloudProviderRateLimitBucket:          1,
-		CloudProviderRateLimitBucketWrite:     1,
-		CloudProviderRateLimitQPS:             1,
-		CloudProviderRateLimitQPSWrite:        1,
-		AvailabilitySetNodesCacheTTLInSeconds: 100,
-		VmssCacheTTLInSeconds:                 100,
-		VmssVirtualMachinesCacheTTLInSeconds:  100,
-		VMCacheTTLInSeconds:                   100,
-		LoadBalancerCacheTTLInSeconds:         100,
-		NsgCacheTTLInSeconds:                  100,
-		RouteTableCacheTTLInSeconds:           100,
-		Location:                              "location",
-		MaximumLoadBalancerRuleCount:          1,
-		PrimaryAvailabilitySetName:            "primaryAvailabilitySetName",
-		PrimaryScaleSetName:                   "primaryScaleSetName",
-		ResourceGroup:                         "resourcegroup",
-		RouteTableName:                        "routeTableName",
-		RouteTableResourceGroup:               "routeTableResourceGroup",
-		SecurityGroupName:                     "securityGroupName",
-		SubnetName:                            "subnetName",
-		UseInstanceMetadata:                   true,
-		VMType:                                "standard",
-		VnetName:                              "vnetName",
-		VnetResourceGroup:                     "vnetResourceGroup",
-	}
-
-	buffer := bytes.NewBufferString(azureConfig)
-	config, err := parseConfig(buffer)
-	assert.NoError(t, err)
-	assert.Equal(t, expected, config)
-}
 
 // Test flipServiceInternalAnnotation
 func TestFlipServiceInternalAnnotation(t *testing.T) {
@@ -886,7 +797,11 @@ func TestReconcileSecurityGroupEtagMismatch(t *testing.T) {
 	newSG, err := az.reconcileSecurityGroup(testClusterName, &svc1, &lbStatus.Ingress[0].IP, true /* wantLb */)
 	assert.Nil(t, newSG)
 	assert.NotNil(t, err)
-	assert.Equal(t, err, errPreconditionFailedEtagMismatch)
+	expectedError := &retry.Error{
+		HTTPStatusCode: http.StatusPreconditionFailed,
+		RawError:       errPreconditionFailedEtagMismatch,
+	}
+	assert.Equal(t, err, expectedError.Error())
 }
 
 func TestReconcilePublicIPWithNewService(t *testing.T) {
@@ -1838,7 +1753,7 @@ func addTestSubnet(t *testing.T, az *Cloud, svc *v1.Service) {
 
 	ctx, cancel := getContextWithCancel()
 	defer cancel()
-	_, err := az.SubnetsClient.CreateOrUpdate(ctx, az.VnetResourceGroup, az.VnetName, subName,
+	err := az.SubnetsClient.CreateOrUpdate(ctx, az.VnetResourceGroup, az.VnetName, subName,
 		network.Subnet{
 			ID:   &subnetID,
 			Name: &subName,

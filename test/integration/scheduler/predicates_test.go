@@ -22,13 +22,12 @@ import (
 	"time"
 
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	featuregatetesting "k8s.io/component-base/featuregate/testing"
 	"k8s.io/kubernetes/pkg/features"
-	"k8s.io/kubernetes/pkg/scheduler/algorithmprovider"
 	st "k8s.io/kubernetes/pkg/scheduler/testing"
 	testutils "k8s.io/kubernetes/test/utils"
 	imageutils "k8s.io/kubernetes/test/utils/image"
@@ -835,7 +834,7 @@ func TestInterPodAffinity(t *testing.T) {
 		}
 		testPod, err := cs.CoreV1().Pods(context.ns.Name).Create(test.pod)
 		if err != nil {
-			if !(test.errorType == "invalidPod" && errors.IsInvalid(err)) {
+			if !(test.errorType == "invalidPod" && apierrors.IsInvalid(err)) {
 				t.Fatalf("Test Failed: error, %v, while creating pod during test: %v", err, test.test)
 			}
 		}
@@ -879,8 +878,6 @@ func TestInterPodAffinity(t *testing.T) {
 // TestEvenPodsSpreadPredicate verifies that EvenPodsSpread predicate functions well.
 func TestEvenPodsSpreadPredicate(t *testing.T) {
 	defer featuregatetesting.SetFeatureGateDuringTest(t, utilfeature.DefaultFeatureGate, features.EvenPodsSpread, true)()
-	// Apply feature gates to enable EvenPodsSpread
-	defer algorithmprovider.ApplyFeatureGates()()
 
 	context := initTest(t, "eps-predicate")
 	cs := context.clientSet
@@ -1017,7 +1014,7 @@ func TestEvenPodsSpreadPredicate(t *testing.T) {
 				}
 			}
 			testPod, err := cs.CoreV1().Pods(tt.incomingPod.Namespace).Create(tt.incomingPod)
-			if err != nil && !errors.IsInvalid(err) {
+			if err != nil && !apierrors.IsInvalid(err) {
 				t.Fatalf("Test Failed: error while creating pod during test: %v", err)
 			}
 

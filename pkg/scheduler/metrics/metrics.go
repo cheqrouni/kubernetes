@@ -28,8 +28,8 @@ import (
 const (
 	// SchedulerSubsystem - subsystem name used by scheduler
 	SchedulerSubsystem = "scheduler"
-	// SchedulingLatencyName - scheduler latency metric name
-	SchedulingLatencyName = "scheduling_duration_seconds"
+	// DeprecatedSchedulingDurationName - scheduler duration metric name which is deprecated
+	DeprecatedSchedulingDurationName = "scheduling_duration_seconds"
 	// DeprecatedSchedulingLatencyName - scheduler latency metric name which is deprecated
 	DeprecatedSchedulingLatencyName = "scheduling_latency_seconds"
 
@@ -62,16 +62,17 @@ var (
 	// PodScheduleFailures counts how many pods could not be scheduled.
 	PodScheduleFailures = scheduleAttempts.With(metrics.Labels{"result": "unschedulable"})
 	// PodScheduleErrors counts how many pods could not be scheduled due to a scheduler error.
-	PodScheduleErrors = scheduleAttempts.With(metrics.Labels{"result": "error"})
-	SchedulingLatency = metrics.NewSummaryVec(
+	PodScheduleErrors            = scheduleAttempts.With(metrics.Labels{"result": "error"})
+	DeprecatedSchedulingDuration = metrics.NewSummaryVec(
 		&metrics.SummaryOpts{
 			Subsystem: SchedulerSubsystem,
-			Name:      SchedulingLatencyName,
+			Name:      DeprecatedSchedulingDurationName,
 			Help:      "Scheduling latency in seconds split by sub-parts of the scheduling operation",
 			// Make the sliding window of 5h.
 			// TODO: The value for this should be based on some SLI definition (long term).
-			MaxAge:         5 * time.Hour,
-			StabilityLevel: metrics.ALPHA,
+			MaxAge:            5 * time.Hour,
+			StabilityLevel:    metrics.ALPHA,
+			DeprecatedVersion: "1.18.0",
 		},
 		[]string{OperationLabel},
 	)
@@ -126,13 +127,14 @@ var (
 			DeprecatedVersion: "1.14.0",
 		},
 	)
-	SchedulingAlgorithmPredicateEvaluationDuration = metrics.NewHistogram(
+	DeprecatedSchedulingAlgorithmPredicateEvaluationSecondsDuration = metrics.NewHistogram(
 		&metrics.HistogramOpts{
-			Subsystem:      SchedulerSubsystem,
-			Name:           "scheduling_algorithm_predicate_evaluation_seconds",
-			Help:           "Scheduling algorithm predicate evaluation duration in seconds",
-			Buckets:        metrics.ExponentialBuckets(0.001, 2, 15),
-			StabilityLevel: metrics.ALPHA,
+			Subsystem:         SchedulerSubsystem,
+			Name:              "scheduling_algorithm_predicate_evaluation_seconds",
+			Help:              "Scheduling algorithm predicate evaluation duration in seconds",
+			Buckets:           metrics.ExponentialBuckets(0.001, 2, 15),
+			StabilityLevel:    metrics.ALPHA,
+			DeprecatedVersion: "1.18.0",
 		},
 	)
 	DeprecatedSchedulingAlgorithmPredicateEvaluationDuration = metrics.NewHistogram(
@@ -145,13 +147,14 @@ var (
 			DeprecatedVersion: "1.14.0",
 		},
 	)
-	SchedulingAlgorithmPriorityEvaluationDuration = metrics.NewHistogram(
+	DeprecatedSchedulingAlgorithmPriorityEvaluationSecondsDuration = metrics.NewHistogram(
 		&metrics.HistogramOpts{
-			Subsystem:      SchedulerSubsystem,
-			Name:           "scheduling_algorithm_priority_evaluation_seconds",
-			Help:           "Scheduling algorithm priority evaluation duration in seconds",
-			Buckets:        metrics.ExponentialBuckets(0.001, 2, 15),
-			StabilityLevel: metrics.ALPHA,
+			Subsystem:         SchedulerSubsystem,
+			Name:              "scheduling_algorithm_priority_evaluation_seconds",
+			Help:              "Scheduling algorithm priority evaluation duration in seconds",
+			Buckets:           metrics.ExponentialBuckets(0.001, 2, 15),
+			StabilityLevel:    metrics.ALPHA,
+			DeprecatedVersion: "1.18.0",
 		},
 	)
 	DeprecatedSchedulingAlgorithmPriorityEvaluationDuration = metrics.NewHistogram(
@@ -303,7 +306,7 @@ var (
 
 	metricsList = []metrics.Registerable{
 		scheduleAttempts,
-		SchedulingLatency,
+		DeprecatedSchedulingDuration,
 		DeprecatedSchedulingLatency,
 		E2eSchedulingLatency,
 		DeprecatedE2eSchedulingLatency,
@@ -311,9 +314,9 @@ var (
 		DeprecatedSchedulingAlgorithmLatency,
 		BindingLatency,
 		DeprecatedBindingLatency,
-		SchedulingAlgorithmPredicateEvaluationDuration,
+		DeprecatedSchedulingAlgorithmPredicateEvaluationSecondsDuration,
 		DeprecatedSchedulingAlgorithmPredicateEvaluationDuration,
-		SchedulingAlgorithmPriorityEvaluationDuration,
+		DeprecatedSchedulingAlgorithmPriorityEvaluationSecondsDuration,
 		DeprecatedSchedulingAlgorithmPriorityEvaluationDuration,
 		SchedulingAlgorithmPreemptionEvaluationDuration,
 		DeprecatedSchedulingAlgorithmPreemptionEvaluationDuration,
@@ -366,7 +369,7 @@ func UnschedulablePods() metrics.GaugeMetric {
 
 // Reset resets metrics
 func Reset() {
-	SchedulingLatency.Reset()
+	DeprecatedSchedulingDuration.Reset()
 	DeprecatedSchedulingLatency.Reset()
 }
 

@@ -76,6 +76,7 @@ EXTERNAL_CLOUD_PROVIDER=${EXTERNAL_CLOUD_PROVIDER:-false}
 EXTERNAL_CLOUD_PROVIDER_BINARY=${EXTERNAL_CLOUD_PROVIDER_BINARY:-""}
 CLOUD_PROVIDER=${CLOUD_PROVIDER:-""}
 CLOUD_CONFIG=${CLOUD_CONFIG:-""}
+EXTERNAL_CLOUD_VOLUME_PLUGIN=${EXTERNAL_CLOUD_VOLUME_PLUGIN:-"${CLOUD_PROVIDER}"}
 FEATURE_GATES=${FEATURE_GATES:-"AllAlpha=false"}
 STORAGE_BACKEND=${STORAGE_BACKEND:-"etcd3"}
 STORAGE_MEDIA_TYPE=${STORAGE_MEDIA_TYPE:-""}
@@ -131,11 +132,6 @@ if [ "${CLOUD_PROVIDER}" == "openstack" ]; then
         echo "Cloud config ${CLOUD_CONFIG} doesn't exist"
         exit 1
     fi
-fi
-
-# warn if users are running with swap allowed
-if [ "${FAIL_SWAP_ON}" == "false" ]; then
-    echo "WARNING : The kubelet is configured to not fail even if swap is enabled; production deployments should disable swap."
 fi
 
 if [ "$(id -u)" != "0" ]; then
@@ -620,7 +616,7 @@ function start_controller_manager {
     cloud_config_arg=("--cloud-provider=${CLOUD_PROVIDER}" "--cloud-config=${CLOUD_CONFIG}")
     if [[ "${EXTERNAL_CLOUD_PROVIDER:-}" == "true" ]]; then
       cloud_config_arg=("--cloud-provider=external")
-      cloud_config_arg+=("--external-cloud-volume-plugin=${CLOUD_PROVIDER}")
+      cloud_config_arg+=("--external-cloud-volume-plugin=${EXTERNAL_CLOUD_VOLUME_PLUGIN}")
       cloud_config_arg+=("--cloud-config=${CLOUD_CONFIG}")
     fi
 
@@ -788,6 +784,11 @@ function start_kubelet {
       ${KUBELET_FLAGS}
     )
 
+    # warn if users are running with swap allowed
+    if [ "${FAIL_SWAP_ON}" == "false" ]; then
+        echo "WARNING : The kubelet is configured to not fail even if swap is enabled; production deployments should disable swap."
+    fi
+    
     if [[ "${REUSE_CERTS}" != true ]]; then
         generate_kubelet_certs
     fi

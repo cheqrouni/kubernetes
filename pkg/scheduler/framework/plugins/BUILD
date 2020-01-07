@@ -2,10 +2,14 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
-    srcs = ["default_registry.go"],
+    srcs = [
+        "legacy_registry.go",
+        "registry.go",
+    ],
     importpath = "k8s.io/kubernetes/pkg/scheduler/framework/plugins",
     visibility = ["//visibility:public"],
     deps = [
+        "//pkg/features:go_default_library",
         "//pkg/scheduler/algorithm/predicates:go_default_library",
         "//pkg/scheduler/algorithm/priorities:go_default_library",
         "//pkg/scheduler/apis/config:go_default_library",
@@ -21,7 +25,6 @@ go_library(
         "//pkg/scheduler/framework/plugins/nodeunschedulable:go_default_library",
         "//pkg/scheduler/framework/plugins/nodevolumelimits:go_default_library",
         "//pkg/scheduler/framework/plugins/podtopologyspread:go_default_library",
-        "//pkg/scheduler/framework/plugins/requestedtocapacityratio:go_default_library",
         "//pkg/scheduler/framework/plugins/serviceaffinity:go_default_library",
         "//pkg/scheduler/framework/plugins/tainttoleration:go_default_library",
         "//pkg/scheduler/framework/plugins/volumebinding:go_default_library",
@@ -29,7 +32,10 @@ go_library(
         "//pkg/scheduler/framework/plugins/volumezone:go_default_library",
         "//pkg/scheduler/framework/v1alpha1:go_default_library",
         "//pkg/scheduler/volumebinder:go_default_library",
+        "//staging/src/k8s.io/api/core/v1:go_default_library",
         "//staging/src/k8s.io/apimachinery/pkg/runtime:go_default_library",
+        "//staging/src/k8s.io/apimachinery/pkg/util/sets:go_default_library",
+        "//staging/src/k8s.io/apiserver/pkg/util/feature:go_default_library",
         "//vendor/k8s.io/klog:go_default_library",
     ],
 )
@@ -47,6 +53,7 @@ filegroup(
         ":package-srcs",
         "//pkg/scheduler/framework/plugins/defaultpodtopologyspread:all-srcs",
         "//pkg/scheduler/framework/plugins/examples:all-srcs",
+        "//pkg/scheduler/framework/plugins/helper:all-srcs",
         "//pkg/scheduler/framework/plugins/imagelocality:all-srcs",
         "//pkg/scheduler/framework/plugins/interpodaffinity:all-srcs",
         "//pkg/scheduler/framework/plugins/migration:all-srcs",
@@ -59,7 +66,6 @@ filegroup(
         "//pkg/scheduler/framework/plugins/nodeunschedulable:all-srcs",
         "//pkg/scheduler/framework/plugins/nodevolumelimits:all-srcs",
         "//pkg/scheduler/framework/plugins/podtopologyspread:all-srcs",
-        "//pkg/scheduler/framework/plugins/requestedtocapacityratio:all-srcs",
         "//pkg/scheduler/framework/plugins/serviceaffinity:all-srcs",
         "//pkg/scheduler/framework/plugins/tainttoleration:all-srcs",
         "//pkg/scheduler/framework/plugins/volumebinding:all-srcs",
@@ -72,10 +78,13 @@ filegroup(
 
 go_test(
     name = "go_default_test",
-    srcs = ["default_registry_test.go"],
+    srcs = ["legacy_registry_test.go"],
     embed = [":go_default_library"],
     deps = [
         "//pkg/scheduler/apis/config:go_default_library",
+        "//pkg/scheduler/framework/plugins/noderesources:go_default_library",
+        "//staging/src/k8s.io/api/core/v1:go_default_library",
         "//vendor/github.com/google/go-cmp/cmp:go_default_library",
+        "//vendor/github.com/stretchr/testify/assert:go_default_library",
     ],
 )
